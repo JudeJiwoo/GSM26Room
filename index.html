@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>GSM 2026 · 방 조회 Room Lookup</title>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700;900&display=swap" rel="stylesheet">
+<style>
+:root{--cream:#FCF4E7;--brown:#3B2612;--gold:#B8802F;--muted:#6B563F;--line:#E3D6C2}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+body{margin:0;background:var(--cream);color:var(--brown);
+ font-family:'Noto Sans KR',-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
+ min-height:100dvh;display:flex;flex-direction:column;align-items:center;padding:30px 18px 46px}
+.wrap{width:100%;max-width:500px}
+header{text-align:center;margin-bottom:24px}
+h1{font-size:29px;font-weight:900;margin:0 0 4px;letter-spacing:-.5px}
+.sub{font-size:13px;color:var(--muted);font-weight:500}
+.rule{width:54px;height:3px;background:var(--gold);margin:15px auto 0;border-radius:2px}
+.card{background:#fff;border:1px solid var(--line);border-radius:18px;padding:22px;
+ box-shadow:0 2px 14px rgba(59,38,18,.06)}
+.fld{margin-bottom:15px}
+label{display:block;font-size:14px;font-weight:700;margin-bottom:7px}
+label span{font-weight:400;color:var(--muted);font-size:12px}
+label em{font-style:normal;color:var(--gold);font-size:11.5px;font-weight:500}
+input,select{width:100%;padding:14px 15px;font-size:16.5px;border:2px solid var(--line);
+ border-radius:12px;outline:none;font-family:inherit;background:#fff;color:var(--brown);
+ -webkit-appearance:none;appearance:none}
+select{background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='14' height='9'><path d='M1 1l6 6 6-6' stroke='%236B563F' stroke-width='2' fill='none'/></svg>");
+ background-repeat:no-repeat;background-position:right 15px center}
+input:focus,select:focus{border-color:var(--gold)}
+button{width:100%;margin-top:4px;padding:15px;font-size:17px;font-weight:700;
+ background:var(--brown);color:var(--cream);border:0;border-radius:12px;cursor:pointer;font-family:inherit}
+button:active{opacity:.85}
+#out{margin-top:18px}
+.res{background:#fff;border:2px solid var(--gold);border-radius:18px;padding:26px 20px;text-align:center;
+ box-shadow:0 4px 20px rgba(184,128,47,.14);animation:pop .26s ease}
+@keyframes pop{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+.bld{font-size:17px;font-weight:700;color:var(--gold)}
+.bld small{display:block;font-size:11.5px;font-weight:400;color:var(--muted);margin-top:3px}
+.room{font-size:62px;font-weight:900;line-height:1.1;margin:12px 0 5px;letter-spacing:-2px}
+.meta{font-size:14px;color:var(--muted)}
+.err{background:#fff;border:2px solid #E0B4B4;border-radius:18px;padding:22px 20px;text-align:center}
+.err b{display:block;font-size:16px;color:#B3453E;margin-bottom:7px}
+.err p{margin:0;font-size:13px;color:var(--muted);line-height:1.8}
+footer{margin-top:24px;text-align:center;font-size:11.5px;color:var(--muted);line-height:1.8}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>GSM 2026</h1>
+    <div class="sub">방 조회 &nbsp;|&nbsp; Room Lookup</div>
+    <div class="rule"></div>
+  </header>
+
+  <div class="card">
+    <div class="fld">
+      <label>이름 <span>Name</span></label>
+      <input id="nm" type="text" autocomplete="off" autocapitalize="off" spellcheck="false"
+             placeholder="등록하신 이름 그대로">
+    </div>
+    <div class="fld">
+      <label>소속 <span>Campus</span></label>
+      <select id="cp"><option value="">— 선택하세요 Select —</option></select>
+    </div>
+    <div class="fld">
+      <label>휴대폰 뒤 4자리 <em>선택 Optional</em>
+        <span>Last 4 digits</span></label>
+      <input id="ph" type="tel" inputmode="numeric" maxlength="4" autocomplete="off" placeholder="5678">
+    </div>
+    <button id="go">조회하기 &nbsp;Search</button>
+  </div>
+
+  <div id="out"></div>
+
+  <footer>
+    13th Global Student Mission Conference<br>
+    2026. 8. 21 – 23 · Pyeongtaek University
+  </footer>
+</div>
+
+<script>
+let DB=null;
+fetch('data.json').then(r=>r.json()).then(d=>{
+  DB=d;
+  const s=document.getElementById('cp');
+  d.c.forEach(c=>{const o=document.createElement('option');o.value=c;o.textContent=c;s.appendChild(o);});
+});
+const norm=s=>s.normalize('NFKC').toLowerCase().replace(/\(.*?\)/g,'').replace(/[^0-9a-z\uac00-\ud7a3]/g,'');
+async function H(s){
+  const b=new TextEncoder().encode('gsm2026|'+s);
+  const d=await crypto.subtle.digest('SHA-256',b);
+  return [...new Uint8Array(d)].map(x=>x.toString(16).padStart(2,'0')).join('').slice(0,20);
+}
+function show(html){document.getElementById('out').innerHTML=html;}
+async function search(){
+  const nm=document.getElementById('nm').value.trim();
+  const cp=document.getElementById('cp').value;
+  const ph=document.getElementById('ph').value.replace(/\D/g,'');
+  if(!DB){show('<div class="err"><b>잠시만요</b><p>자료를 불러오는 중입니다.</p></div>');return;}
+  if(!nm||!cp){show('<div class="err"><b>입력이 필요합니다</b><p>이름과 소속을 모두 입력해 주세요.<br>Please enter your name and campus.</p></div>');return;}
+  const k=norm(nm)+'|'+cp;
+  let hit=null;
+  if(ph.length===4) hit=DB.i[await H(k+'|'+ph)];
+  if(!hit) hit=DB.i[await H(k)];
+  if(hit){
+    show(`<div class="res">
+      <div class="bld">${hit.b}<small>${hit.be}</small></div>
+      <div class="room">${hit.r}</div>
+      <div class="meta">${hit.f} · ${hit.t}</div></div>`);
+  }else{
+    show(`<div class="err"><b>찾을 수 없습니다 &nbsp;Not found</b>
+      <p>· 등록하신 이름 그대로 입력했는지 확인해 주세요.<br>
+      · 소속이 맞는지 확인해 주세요.<br>
+      · 그래도 안 되면 등록 데스크로 문의해 주세요.</p></div>`);
+  }
+}
+document.getElementById('go').onclick=search;
+['nm','ph'].forEach(id=>document.getElementById(id)
+  .addEventListener('keydown',e=>{if(e.key==='Enter')search();}));
+</script>
+</body>
+</html>
